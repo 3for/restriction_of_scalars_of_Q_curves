@@ -7,6 +7,27 @@ load('non_abelian_extensions.sage')
 # 3) The extension k/M is non-abelian
 # these fields have been precomputed, but we check in the code below that they satisfy the three properties above
 
+# uses magma_free to check whether the field K (a relative extension) is abelian or not
+# this is used because the magma version that I have in my computer is a bit old, and it returns an error when calculating certain Galois groups. In this case, I use the magma online instead
+def magma_free_is_abelian(K):
+    sfbase = str(K.base_field().defining_polynomial())
+    sr = str(K.base_field().gen())
+    sgbase = str(K.defining_polynomial())
+    a = magma_free('R<x> := PolynomialRing(RationalField());M<'+sr+'> := NumberField('+sfbase+');R<x> := PolynomialRing(M);K:=NumberField('+sgbase+');IsAbelian(GaloisGroup(K));')
+    if a.format() == 'false':
+        return False
+    if a.format() == 'true':
+        return True
+    raise RuntimeError(a.format())
+
+# the same as above, but returns the exponent of the galois group of K
+def magma_free_exponent(K):
+    sfbase = str(K.base_field().defining_polynomial())
+    sr = str(K.base_field().gen())
+    sgbase = str(K.defining_polynomial())
+    a = magma_free('R<x> := PolynomialRing(RationalField());M<'+sr+'> := NumberField('+sfbase+');R<x> := PolynomialRing(M);K:=NumberField('+sgbase+');Exponent(GaloisGroup(K));')
+    return ZZ(a.format())
+
 # computes the symbol (alpha/q) that appears in, e.g. page 646 of [Nak04]
 def norm_residue_symbol(alpha, q, K):
     if q.norm() % 2 == 0:
@@ -253,7 +274,12 @@ def compute_endomorphism_algebras(field):
     # k0H, which is a quadratic extension of H which non abelian over K
     assert k0H.is_galois()
     k_K.<gkK> = k0H.relativize(K.embeddings(k0H)[0])
-    assert magma(k_K).GaloisGroup().IsAbelian().sage() == False
+    # For these three discriminants my local version of returns an error when trying to compute the Galois group, so I use the magma calculator online instead
+    if D != -120 and D!= -228 and D != - 715:
+        assert magma(k_K).GaloisGroup().IsAbelian().sage() == False
+    else:
+        assert magma_free_is_abelian(k_K) == False
+    # assert magma(k_K).GaloisGroup().IsAbelian().sage() == False
     for S in k0H.subfields():
         if S[0].is_isomorphic(L1):
             LL1.<g> = k0H.relativize(S[1]) # LL1 is the relative field extension k0H/S[0], where S[0] is the subfield of k0H isomorphic to L1
@@ -326,26 +352,24 @@ def find_w1s_w2s(D):
 def compute_T(L, F, P, Q, K, w1 = [], w2 = []):
     D = K.discriminant()
     n = find_n(P, Q, K, w1, w2)
-    GL = magma(L).GaloisGroup()
-    if D != -715:
-        GF = magma(F).GaloisGroup()
-        Fabelian = GF.IsAbelian()
-    else: # en aquest cas el magma que tinc instalat donava error; ho vaig calcular amb el magma onlin i donava que en cap cas era abelià
-        Fabelian = False
-    assert GL.Order() == 4
-    if GL.Exponent() == 2:
+    # For these three discriminants my local version of returns an error when trying to compute the Galois group, so I use the magma calculator online instead
+    if D != -120 and D!= -228 and D != - 715:
+        Fabelian = magma(F).GaloisGroup().IsAbelian()
+    else:
+        Fabelian = magma_free_is_abelian(F)
+    if D != -120 and D!= -228 and D != - 715:
+        exponent = magma(L).GaloisGroup().Exponent()
+    else:
+        exponent = magma_free_exponent(L)
+    if exponent == 2:
         if Fabelian:
-            # print 'n =', n, ' GL exp 2 and GF abelian' 
             return n.squarefree_part()
         else:
-            # print 'n =', n, ' GL exp 2 and GF NON-abelian' 
             return (D/n).squarefree_part()
-    if GL.IsCyclic():
+    else:
         if Fabelian:
-            # print 'n =', n, ' GL cyclic and GF abelian' 
             return (-n).squarefree_part()
         else:
-            # print 'n =', n, ' GL cyclic and GF NON- abelian' 
             return (-D/n).squarefree_part()
     
 # this is the main computation
