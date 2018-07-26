@@ -82,21 +82,24 @@ def phi_plus_phi_conj(P, q, K, w1 = [], w2 = []):
     xxbar_2 = K.embeddings(Wa)[1](xxbar)
     z = (x2_1 + xxbar_1)/x
     if z.minpoly().degree() > 2: # try if it is with the other embedding
+        # print 'trying the other embedding'
         z = (x2_2 + xxbar_2)/x 
     if z.minpoly().degree() > 2:
-        print 'trying the other embedding'
         # we check that phi(P) + phi(\bar P) lies in a quadratic, otherwise something is wrong
         raise RuntimeError('phi(P) + phi(\bar P) is not a quadratic number')
     return z
 
 # Returns P1 and P2, two generators of the class group of K. We check that phi0_plus_phi0_conj(Pi) are quadratic numbers
-def find_P1_P2(q, K): 
+def find_P1_P2(q, K, min_prime = 1): 
     D = K.discriminant()
     p = 1
     Ps = []
     while True:
         p = p.next_prime()
         if kronecker_symbol(D, p) != 1:
+            continue
+        if p < min_prime: 
+            print 'changing prime in D =',D
             continue
         P = K.ideal(p).factor()[0][0]
         if P.is_principal():
@@ -107,7 +110,8 @@ def find_P1_P2(q, K):
         try:
             phi_plus_phi_conj(P, q, K)
         except RuntimeError:
-            assert 0 #this shouldn't happen
+            # assert 0 #this shouldn't happen
+            continue
         Ps.append(P)
         if len(Ps) == 2:
             return Ps[0], Ps[1]
@@ -115,6 +119,7 @@ def find_P1_P2(q, K):
 # finds n as in Proposition 7 of [Nak04]
 def find_n(P, Q, K, w1 = [], w2 = []): 
     s = phi_plus_phi_conj(P, Q, K, w1, w2)
+    # print 'in find_n the degree of the minimal polynomial is ', s.minpoly().degree()
     n = s.minpoly().discriminant().squarefree_part()
     return n
 
@@ -209,7 +214,7 @@ def eta_8(alpha, K):
 
 
 # this is the main routine: given a field K with class group C2 x C2 it computes the endomorphism algebras of the restriction of scalars of the eight classes of Q-curves over that field   
-def compute_endomorphism_algebras(D, use_magma = False):
+def compute_endomorphism_algebras(D, use_magma_free = False, min_prime = 1):
     # print '####################'
     # print "Field of Discriminant D = ", D, " = ", D.factor()
     x = QQ['x'].gen()
@@ -243,7 +248,7 @@ def compute_endomorphism_algebras(D, use_magma = False):
     R.<y> = PolynomialRing(K)
     H.<a,b> = NumberFieldTower([y^2 - p1s, y^2-p2s])
     assert H.absolute_field('hh').is_isomorphic(K.hilbert_class_field('rr').absolute_field('rr'))
-    P1, P2 = find_P1_P2(Q,K) # these two generate Cl(K) and we have found them so that phi_0_plus_phi0_conj is a quadratic irrationality
+    P1, P2 = find_P1_P2(Q,K, min_prime) # these two generate Cl(K) and we have found them so that phi_0_plus_phi0_conj is a quadratic irrationality
     for qq in [p1s, p2s, p1s*p2s]:
         K1.<g1> = NumberField(y^2 - qq)
         if len(K1.ideal(P1).factor()) == 2:
@@ -252,6 +257,8 @@ def compute_endomorphism_algebras(D, use_magma = False):
             q2 = qq
     L1.<g1> = NumberField(y^2 - q1) # field fixed by the decomposition group at P1 
     L2.<g2> = NumberField(y^2 - q2) # field fixed by the decomposition group at P2
+    # print 'L1 =', L1
+    # print 'L2 =', L2
     F1 = L1.maximal_totally_real_subfield()[0]
     F2 = L2.maximal_totally_real_subfield()[0]
     x = QQ['x'].gen()
@@ -260,7 +267,7 @@ def compute_endomorphism_algebras(D, use_magma = False):
     # k0H, which is a quadratic extension of H which non abelian over K
     assert k0H.is_galois()
     k_K.<gkK> = k0H.relativize(K.embeddings(k0H)[0])
-    if not use_magma:
+    if not use_magma_free:
         assert magma(k_K).GaloisGroup().IsAbelian().sage() == False
     else:
         assert magma_free_is_abelian(k_K) == False
@@ -282,13 +289,13 @@ def compute_endomorphism_algebras(D, use_magma = False):
     a3,b3= find_n(P1, Q, K, w1 = w1s[2], w2=w2s[2]), find_n(P2, Q, K, w1 = w1s[2], w2=w2s[2])
     a4,b4= find_n(P1, Q, K, w1 = w1s[3], w2=w2s[3]), find_n(P2, Q, K, w1 = w1s[3], w2=w2s[3])
     # print 'Quaternion Algebras'
-    a5 = compute_T(LL1, FF1, P1, Q, K, w1 = w1s[0], w2=w2s[0], use_magma = use_magma); b5 = compute_T(LL2, FF2, P2, Q, K,w1 = w1s[0], w2=w2s[0],use_magma = use_magma); # print a5, b5, 'Disc =', QuaternionAlgebra(a5,b5).discriminant(),QuaternionAlgebra(a5,b5).discriminant() == 1; 
+    a5 = compute_T(LL1, FF1, P1, Q, K, w1 = w1s[0], w2=w2s[0], use_magma_free = use_magma_free); b5 = compute_T(LL2, FF2, P2, Q, K,w1 = w1s[0], w2=w2s[0],use_magma_free = use_magma_free); # print a5, b5, 'Disc =', QuaternionAlgebra(a5,b5).discriminant(),QuaternionAlgebra(a5,b5).discriminant() == 1; 
     D5 = QuaternionAlgebra(a5,b5).discriminant()
-    a6= compute_T(LL1, FF1, P1, Q, K,w1 = w1s[1], w2=w2s[1],use_magma = use_magma); b6 =  compute_T(LL2, FF2, P2, Q, K, w1 = w1s[1], w2=w2s[1],use_magma = use_magma); # print a6, b6,  'Disc =', QuaternionAlgebra(a6,b6).discriminant(), QuaternionAlgebra(a6,b6).discriminant() == 1  ; 
+    a6= compute_T(LL1, FF1, P1, Q, K,w1 = w1s[1], w2=w2s[1],use_magma_free = use_magma_free); b6 =  compute_T(LL2, FF2, P2, Q, K, w1 = w1s[1], w2=w2s[1],use_magma_free = use_magma_free); # print a6, b6,  'Disc =', QuaternionAlgebra(a6,b6).discriminant(), QuaternionAlgebra(a6,b6).discriminant() == 1  ; 
     D6 = QuaternionAlgebra(a6,b6).discriminant()
-    a7 = compute_T(LL1, FF1, P1, Q, K, w1 = w1s[2], w2=w2s[2],use_magma = use_magma); b7 = compute_T(LL2, FF2, P2, Q, K, w1 = w1s[2], w2=w2s[2],use_magma = use_magma); #print a7, b7,  'Disc =', QuaternionAlgebra(a7,b7).discriminant(),QuaternionAlgebra(a7,b7).discriminant() == 1; 
+    a7 = compute_T(LL1, FF1, P1, Q, K, w1 = w1s[2], w2=w2s[2],use_magma_free = use_magma_free); b7 = compute_T(LL2, FF2, P2, Q, K, w1 = w1s[2], w2=w2s[2],use_magma_free = use_magma_free); #print a7, b7,  'Disc =', QuaternionAlgebra(a7,b7).discriminant(),QuaternionAlgebra(a7,b7).discriminant() == 1; 
     D7 =  QuaternionAlgebra(a7,b7).discriminant()
-    a8 = compute_T(LL1, FF1, P1, Q, K, w1 = w1s[3], w2=w2s[3],use_magma = use_magma); b8 = compute_T(LL2, FF2, P2, Q, K, w1 = w1s[3], w2=w2s[3],use_magma = use_magma); # print a8, b8,  'Disc =', QuaternionAlgebra(a8,b8).discriminant(), QuaternionAlgebra(a8,b8).discriminant() == 1; 
+    a8 = compute_T(LL1, FF1, P1, Q, K, w1 = w1s[3], w2=w2s[3],use_magma_free = use_magma_free); b8 = compute_T(LL2, FF2, P2, Q, K, w1 = w1s[3], w2=w2s[3],use_magma_free = use_magma_free); # print a8, b8,  'Disc =', QuaternionAlgebra(a8,b8).discriminant(), QuaternionAlgebra(a8,b8).discriminant() == 1; 
     D8 = QuaternionAlgebra(a8,b8).discriminant()
     # We print the table, in latex format
     print '\\hline'
@@ -316,8 +323,8 @@ def find_w1s_w2s(D):
             return [w1, w2]
     if a[0] == 2 and a[1] == 3:
         if b[0] % 4 == 3 and c[0] % 4 == 3:
-            w1 = [[], [-8], [], [-8]]
-            w2 = [[], [], [b[0],c[0]], [b[0],c[0]]]
+            w1 = [[], [-8,b[0]], [], [-8,b[0]]]
+            w2 = [[], [], [-8,c[0]], [-8,c[0]]]
             return [w1, w2]
         if b[0] % 4 == 3 and c[0] % 4 == 1:
             w1 = [[], [8], [], [8]]
@@ -334,15 +341,15 @@ def find_w1s_w2s(D):
     raise NotImplementedError('no omegas yet for D of this form')
 
 # This is used in computing the quaternion endomorphism algebra (t1, t2)_Q. Here we compute the ti associated to the prime P. The field L is the decomposition group of H at P and F is the totally real subfield. 
-def compute_T(L, F, P, Q, K, w1 = [], w2 = [], use_magma = False):
+def compute_T(L, F, P, Q, K, w1 = [], w2 = [], use_magma_free = False):
     D = K.discriminant()
     n = find_n(P, Q, K, w1, w2)
     # For these three discriminants my local version of returns an error when trying to compute the Galois group, so I use the magma calculator online instead
-    if not use_magma:
+    if not use_magma_free:
         Fabelian = magma(F).GaloisGroup().IsAbelian()
     else:
         Fabelian = magma_free_is_abelian(F)
-    if not use_magma:
+    if not use_magma_free:
         exponent = magma(L).GaloisGroup().Exponent()
     else:
         exponent = magma_free_exponent(L)
@@ -358,28 +365,31 @@ def compute_T(L, F, P, Q, K, w1 = [], w2 = [], use_magma = False):
             return (-D/n).squarefree_part()
     
 # this is the main computation
-for i in range(len(data)):
-    D = data[i][1]
-    if D != -120 and D!= -228 and D != - 715:
-        use_magma = False
-    else:
-        use_magma = True
-    try:
-        compute_endomorphism_algebras(D, use_magma = use_magma)
-    except RuntimeError as e:
-        print e.args
-    except NotImplementedError as e:
-        print e.args
-    except TypeError as e:
-        print e.args
+# for i in range(len(data)):
+#     D = data[i][1]
+#     if D == -84:
+#         continue
+#     if D != -120 and D!= -228 and D != - 715:
+#         use_magma_free = False
+#     else:
+#         use_magma_free = True
+#     try:
+#         compute_endomorphism_algebras(D, use_magma_free = use_magma_free)
+#     except RuntimeError as e:
+#         print e.args
+#     except NotImplementedError as e:
+#         print e.args
+#     except TypeError as e:
+#         print e.args
 
 
-# # t compute the endomorphism algebras for an individual discriminant, you can run this
+# # to compute the endomorphism algebras for an individual discriminant, you can run this
 # D = -195
-# compute_endomorphism_algebras(D, use_magma = True)
+# compute_endomorphism_algebras(D, use_magma_free = True)
 
 
 # References
 
-#[Nak04] Tetsuo Nakamura, A classification of Q-curves with complex multiplication, J. Math. Soc. Japan, Vol 56, No 2, 2004.
+# [FG18] Francesc Fité, Xavier Guitart, Endomorphism algebras of geometrically split abelian surfaces over Q.
+# [Nak04] Tetsuo Nakamura, A classification of Q-curves with complex multiplication, J. Math. Soc. Japan, Vol 56, No 2, 2004.
 
