@@ -11,6 +11,6 @@ and then compute the endomorphism algebras corresponding to Gross Q-curves attac
 
 sage: compute_endomorphism_algebras(D, use_magma_free = False)
 
-Even if it is a Sage code, it calls Magma at some points to compute Galois groups. So it is necessary to have Magma installed to run it. In the above command, you can set use_magma_free = True to perform the computations of the Galois groups using the online Magma calculator (it is necessary to have internet connection).
+Even if it is a Sage code, it calls Magma at some points to compute Galois groups. So it is necessary to have Magma installed to run it. Alternatively, in the above command, you can set use_magma_free = True to perform the computations of the Galois groups using the online Magma calculator (it is necessary to have internet connection).
 
 To reproduce Table 1 of the article "Endomorphism algebras of geometrically split abelian surfaces over Q", uncomment the commented lines at the end, and run the file.
