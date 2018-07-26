@@ -213,7 +213,9 @@ def eta_8(alpha, K):
     return -1
 
 
-# this is the main routine: given a field K with class group C2 x C2 it computes the endomorphism algebras of the restriction of scalars of the eight classes of Q-curves over that field   
+# this is the main routine: given a field K with class group C2 x C2 it computes the endomorphism algebras of the restriction of scalars of the eight classes of Q-curves over that field
+# set magma_free = True for doing the computations of the Galois groups using the magma online, instead of the local magma
+# min_prime is mainly for debugging purposes   
 def compute_endomorphism_algebras(D, use_magma_free = False, min_prime = 1):
     # print '####################'
     # print "Field of Discriminant D = ", D, " = ", D.factor()
@@ -303,6 +305,7 @@ def compute_endomorphism_algebras(D, use_magma_free = False, min_prime = 1):
 
 # this finds the elements of W/W_0. A basis is what we call in the paper \tilde\omega_1 and \tilde\omega_2
 # the output are two vectors w1 and w2, and this means that the characters of W/W0 are w1[0]·w2[0], w1[1]·w2[1], w1[2]·w2[2] and w1[3]·w2[3]. Each wi[j] can be either empty (which represents the trivial character), or a vector of integers which means that wi[j] is the product of "eta" characters associated to these integers.
+# These are the 6 items in p. 15 of [FG18]
 def find_w1s_w2s(D):
     a, b, c = D.factor()
     if a[0] == 2  and a[1] == 2:
@@ -364,12 +367,12 @@ def compute_T(L, F, P, Q, K, w1 = [], w2 = [], use_magma_free = False):
         else:
             return (-D/n).squarefree_part()
     
-# this is the main computation
+# To reproduce Table 1 of [FG18], uncomment the following bunch of code and execute 
+# sage: %runfile nakamura.sage
+
 # for i in range(len(data)):
 #     D = data[i][1]
-#     if D == -84:
-#         continue
-#     if D != -120 and D!= -228 and D != - 715:
+#     if D != - 715:
 #         use_magma_free = False
 #     else:
 #         use_magma_free = True
@@ -385,7 +388,7 @@ def compute_T(L, F, P, Q, K, w1 = [], w2 = [], use_magma_free = False):
 
 # # to compute the endomorphism algebras for an individual discriminant, you can run this
 # D = -195
-# compute_endomorphism_algebras(D, use_magma_free = True)
+# compute_endomorphism_algebras(D, use_magma_free = False)
 
 
 # References
